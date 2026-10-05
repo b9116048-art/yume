@@ -86,22 +86,36 @@ static void stateLoad(void) {
     if (clarity < 0 || clarity > 100) clarity = 100;
     LOGI("state load day=%d chaos=%.0f clarity=%.0f", day, chaos, clarity);
 }
-static void drawStateBar(const char* label, float val) {
+static float sDispClr = 100.0f, sDispDel = 0.0f;
+static float sBarLastT = -1.0f;
+static void drawStateBar(const char* label, float val, float* disp, int delirium) {
     float u = G.ui; if (u <= 0.0f) u = 1.0f;
-    float bw = 176.0f * u, bh = 44.0f * u;
-    float bx = G.sw - bw - 24.0f * u;
-    float by = G.sh - 336.0f * u;
-    boxRect(bx, by, bw, bh, 0.05f, 0.06f, 0.09f, 0.60f);
+    float dt = (sBarLastT < 0.0f) ? 0.016f : G.t - sBarLastT;
+    sBarLastT = G.t;
+    if (dt < 0.0f) dt = 0.0f;
+    if (dt > 0.06f) dt = 0.06f;
+    float d = val - *disp, mv = 140.0f * dt;
+    if (fabsf(d) <= mv) *disp = val; else *disp += (d > 0.0f) ? mv : -mv;
+    float t = *disp / 100.0f;
+    float lr = delirium ? (0.92f + 0.03f * t) : 0.64f;
+    float lg = delirium ? (0.92f - 0.64f * t) : 0.90f;
+    float lb = delirium ? (0.90f - 0.64f * t) : 0.62f;
+    float bw = 168.0f * u, bh = 40.0f * u;
+    float bx = G.sw - bw - 16.0f * u;
+    float by = G.sh - 330.0f * u;
+    boxRect(bx, by, bw, bh, 0.05f, 0.06f, 0.09f, 0.62f);
     boxRect(bx, by, 3.0f * u, bh, 0.90f, 0.90f, 0.95f, 0.85f);
-    float t = val / 100.0f;
-    float r2 = 1.0f - 0.65f * t, g2 = 0.35f + 0.50f * t;
-    txt("STATE", bx + 12.0f * u, by + 15.0f * u, 0.38f * u, 0.65f, 0.68f, 0.75f, 0.85f);
-    txt(label, bx + 12.0f * u, by + 36.0f * u, 0.52f * u, r2, g2, 0.30f, 0.95f);
-    char vb[16]; snprintf(vb, sizeof(vb), "%d", (int)(val + 0.5f));
-    float vw = txtW(vb, 0.52f * u);
-    txt(vb, bx + bw - 10.0f * u - vw, by + 36.0f * u, 0.52f * u, r2, g2, 0.30f, 0.95f);
-    boxRect(bx + 12.0f * u, by + bh - 6.0f * u, bw - 24.0f * u, 2.5f * u, 1, 1, 1, 0.15f);
-    boxRect(bx + 12.0f * u, by + bh - 6.0f * u, (bw - 24.0f * u) * t, 2.5f * u, r2, g2, 0.30f, 0.90f);
+    txt(label, bx + 10.0f * u, by + 15.0f * u, 0.40f * u, lr, lg, lb, 0.92f);
+    int lit = (int)(*disp / 10.0f + 0.5f);
+    if (lit < 0) lit = 0;
+    if (lit > 10) lit = 10;
+    for (int i = 0; i < 10; i++) {
+        float s = 12.0f * u;
+        float x = bx + 10.0f * u + i * 14.0f * u;
+        float y = by + 21.0f * u;
+        if (i < lit) boxRect(x, y, s, s, lr, lg, lb, 0.95f);
+        else frameRect(x, y, s, s, 1.2f * u, 0.30f);
+    }
 }
 
 static float rscale(void) { return G.sh / 528.0f; }
@@ -245,7 +259,7 @@ void roomDraw(void) {
         }
     }
     if (morning) boxRect(0, 0, G.sw, G.sh, 1, 1, 0.94f, 0.07f);
-    drawStateBar("清醒度", clarity);
+    drawStateBar("清醒度", clarity, &sDispClr, 0);
 }
 
 // ============================================================
@@ -521,7 +535,7 @@ void dreamDraw(void) {
         for (int i = 1; i < nightMaxHP; i++)
             boxRect(bx + bw * (float)i / nightMaxHP - 1.0f * G.ui, by, 2.0f * G.ui, bh, 0, 0, 0, 0.5f);
     }
-    drawStateBar("虚幻度", chaos);
+    drawStateBar("虚幻度", chaos, &sDispDel, 1);
     if (awakenT > 0.0f) {
         float a = (awakenT > 2.1f) ? (2.6f - awakenT) / 0.5f : (awakenT < 1.2f ? awakenT / 1.2f : 1.0f);
         if (a > 1.0f) a = 1.0f;
