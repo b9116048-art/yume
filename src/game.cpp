@@ -387,7 +387,7 @@ void gameInit(AAssetManager* am) {
     G.A.ui        = gfxLoad("ui.png", 1);
     G.A.font      = gfxLoadFont("font.png", "fontmap.txt");
     dlgLoad();
-    roomEnter(0);
+    if (!gameLoadSession()) roomEnter(0);
     LOGI("gameInit done");
 }
 

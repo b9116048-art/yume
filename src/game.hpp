@@ -57,6 +57,8 @@ void dlgAdvance(void);
 void dlgBar(float x, float y, float w);
 
 void sceneGo(int id);
+void gameSaveSession(void);
+int  gameLoadSession(void);
 
 void roomEnter(int morning);
 void roomUpdate(float dt);

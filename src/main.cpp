@@ -19,6 +19,8 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 void gameInit(AAssetManager* am);
+void gameSaveSession(void);
+int  gameLoadSession(void);
 extern char g_dataDir[256];
 void gameResize(int sw, int sh);
 void gameUpdate(float dt);
@@ -149,42 +151,55 @@ static void pumpInput(void) {
 }
 
 // ---------------- EGL ----------------
-struct Gpu { EGLDisplay d; EGLContext c; EGLSurface s; };
+struct Gpu { EGLDisplay d; EGLContext c; EGLSurface s; EGLConfig cfg; int hasCtx; };
+static Gpu s_gpu;
 
 static int gpuUp(Gpu* G, ANativeWindow* w) {
+    if (G->hasCtx) {
+        G->s = eglCreateWindowSurface(G->d, G->cfg, w, 0);
+        if (G->s == EGL_NO_SURFACE) { LOGE("surface reuse 0x%x", eglGetError()); return 0; }
+        if (!eglMakeCurrent(G->d, G->s, G->s, G->c)) { LOGE("makeCurrent reuse 0x%x", eglGetError()); return 0; }
+        LOGI("EGL context reused");
+        return 1;
+    }
     G->d = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     EGLint a = 0, b = 0;
     if (!eglInitialize(G->d, &a, &b)) { LOGE("eglInitialize 0x%x", eglGetError()); return 0; }
     const EGLint ca[] = { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_NONE };
-    EGLConfig cfg; EGLint n = 0;
-    if (!eglChooseConfig(G->d, ca, &cfg, 1, &n) || n < 1) { LOGE("chooseConfig failed"); eglTerminate(G->d); return 0; }
+    EGLint n = 0;
+    if (!eglChooseConfig(G->d, ca, &G->cfg, 1, &n) || n < 1) { LOGE("chooseConfig failed"); eglTerminate(G->d); return 0; }
     const EGLint cx[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-    G->c = eglCreateContext(G->d, cfg, EGL_NO_CONTEXT, cx);
+    G->c = eglCreateContext(G->d, G->cfg, EGL_NO_CONTEXT, cx);
     if (G->c == EGL_NO_CONTEXT) { LOGE("ctx 0x%x", eglGetError()); eglTerminate(G->d); return 0; }
-    G->s = eglCreateWindowSurface(G->d, cfg, w, 0);
-    if (G->s == EGL_NO_SURFACE) { LOGE("surface 0x%x", eglGetError()); eglTerminate(G->d); return 0; }
+    G->s = eglCreateWindowSurface(G->d, G->cfg, w, 0);
+    if (G->s == EGL_NO_SURFACE) { LOGE("surface 0x%x", eglGetError()); eglDestroyContext(G->d, G->c); eglTerminate(G->d); return 0; }
     if (!eglMakeCurrent(G->d, G->s, G->s, G->c)) { LOGE("makeCurrent 0x%x", eglGetError()); return 0; }
     eglSwapInterval(G->d, 1);
+    G->hasCtx = 1;
     return 1;
 }
-static void gpuDown(Gpu* G) {
+static void gpuLoseSurface(Gpu* G) {
     eglMakeCurrent(G->d, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    eglDestroySurface(G->d, G->s);
-    eglDestroyContext(G->d, G->c);
-    eglTerminate(G->d);
+    if (G->s != EGL_NO_SURFACE) { eglDestroySurface(G->d, G->s); G->s = EGL_NO_SURFACE; }
+}
+static void gpuShutdown(Gpu* G) {
+    eglMakeCurrent(G->d, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (G->s != EGL_NO_SURFACE) eglDestroySurface(G->d, G->s);
+    if (G->c != EGL_NO_CONTEXT) eglDestroyContext(G->d, G->c);
+    if (G->d != EGL_NO_DISPLAY) eglTerminate(G->d);
+    G->hasCtx = 0;
 }
 
 static int renderLoop(ANativeWindow* w) {
-    Gpu Gp;
-    memset(&Gp, 0, sizeof(Gp));
+    /* EGL state now persists in s_gpu across window recreate */
     for (int i = 0; i < 250 && !g.quit; i++) {
         if (ANativeWindow_getWidth(w) > 0 && ANativeWindow_getHeight(w) > 0) break;
         usleep(8 * 1000);
     }
     int W = ANativeWindow_getWidth(w), H = ANativeWindow_getHeight(w);
     if (W <= 0 || H <= 0) { LOGI("window %dx%d not ready, fallback 2400x1080", W, H); W = 2400; H = 1080; }
-    if (!gpuUp(&Gp, w)) return 1;
+    if (!gpuUp(&s_gpu, w)) return 1;
     glViewport(0, 0, W, H);
     if (!s_inited) {
         const char* dp = g.act->internalDataPath;
@@ -221,7 +236,7 @@ static int renderLoop(ANativeWindow* w) {
         if (dt > 0.1f) dt = 0.1f;
         gameUpdate(dt);
         gameRender();
-        eglSwapBuffers(Gp.d, Gp.s);
+        eglSwapBuffers(s_gpu.d, s_gpu.s);
         frames++; acc += dt;
         if (dt > worst) worst = dt;
         if (acc >= 5.0) {
@@ -230,7 +245,7 @@ static int renderLoop(ANativeWindow* w) {
         }
     }
     LOGI("render loop end");
-    gpuDown(&Gp);
+    gpuLoseSurface(&s_gpu);
     return 1;
 }
 
@@ -281,9 +296,10 @@ static void cbIqDestroyed(ANativeActivity* a, AInputQueue* q) {
     s_nptr = 0;
 }
 static void cbFocus(ANativeActivity* a, int f) { LOGI("focus=%d", f); if (f) immersiveApply(a); }
-static void cbPause(ANativeActivity* a) { LOGI("pause"); }
+static void cbPause(ANativeActivity* a) { LOGI("pause"); gameSaveSession(); }
 static void cbResume(ANativeActivity* a) { LOGI("resume"); }
 static void cbDestroy(ANativeActivity* a) {
+    gpuShutdown(&s_gpu);
     pthread_mutex_lock(&g.mtx); g.quit = 1; pthread_cond_broadcast(&g.cv); pthread_mutex_unlock(&g.mtx);
 }
 static void cbConfig(ANativeActivity* a) { LOGI("config changed"); }

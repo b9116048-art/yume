@@ -19,7 +19,7 @@ echo "[4/6] aapt2 link"
 aapt2 compile --dir $R/res -o $B/res.zip
 aapt2 link -o $B/base.apk -I /system/framework/framework-res.apk \
   --manifest $R/AndroidManifest.xml --min-sdk-version 24 --target-sdk-version 31 \
-  --version-code 10 --version-name 2.5 -A $R/assets -R $B/res.zip
+  --version-code 11 --version-name 2.6 -A $R/assets -R $B/res.zip
 echo "[5/6] pack + align"
 rm -rf $B/stage; mkdir -p $B/stage/lib/arm64-v8a
 cp $B/lib/libgame.so $B/stage/lib/arm64-v8a/

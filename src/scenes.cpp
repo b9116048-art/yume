@@ -549,6 +549,56 @@ void dreamDraw(void) {
     txt("DREAM", 24 * G.ui, 46 * G.ui, hs, 1, 1, 1, 0.30f);
 }
 
+// ---- 会话存档: 切后台/退出时序列化, 进程重启时恢复 ----
+void gameSaveSession(void) {
+    if (!g_dataDir[0]) return;
+    char p[512]; snprintf(p, sizeof(p), "%s/yume_session.sav", g_dataDir);
+    FILE* f = fopen(p, "w"); if (!f) return;
+    fprintf(f, "scene=%d", G.scene); fputc(10, f);
+    fprintf(f, "rpx=%.1f rpy=%.1f", rpx, rpy); fputc(10, f);
+    fprintf(f, "dpx=%.1f dpy=%.1f dCamX=%.1f", dpx, dpy, dCamX); fputc(10, f);
+    fprintf(f, "dSpawnX=%.1f dSpawnY=%.1f", dSpawnX, dSpawnY); fputc(10, f);
+    fprintf(f, "nightHP=%d nightDeaths=%d nightDmg=%d", nightHP, nightDeaths, nightDmg); fputc(10, f);
+    fprintf(f, "dSeenCat=%d dSeenRab=%d", dSeenCat, dSeenRab); fputc(10, f);
+    fclose(f);
+    stateSave();
+    LOGI("session saved scene=%d", G.scene);
+}
+
+int gameLoadSession(void) {
+    if (!g_dataDir[0]) return 0;
+    char p[512]; snprintf(p, sizeof(p), "%s/yume_session.sav", g_dataDir);
+    FILE* f = fopen(p, "r"); if (!f) return 0;
+    int sc = -1; float vrpx=0, vrpy=0, vdpx=0, vdpy=0, vdcx=0, vdsx=0, vdsy=0;
+    int vhp=3, vnd=0, vnmm=0, vsc=0, vsr=0;
+    char ln[256];
+    while (fgets(ln, sizeof(ln), f)) {
+        sscanf(ln, "scene=%d", &sc);
+        sscanf(ln, "rpx=%f rpy=%f", &vrpx, &vrpy);
+        sscanf(ln, "dpx=%f dpy=%f dCamX=%f", &vdpx, &vdpy, &vdcx);
+        sscanf(ln, "dSpawnX=%f dSpawnY=%f", &vdsx, &vdsy);
+        sscanf(ln, "nightHP=%d nightDeaths=%d nightDmg=%d", &vhp, &vnd, &vnmm);
+        sscanf(ln, "dSeenCat=%d dSeenRab=%d", &vsc, &vsr);
+    }
+    fclose(f);
+    stateLoad();
+    if (sc < 0) return 0;
+    roomEnter(0);
+    if (sc == SC_DREAM) {
+        dreamEnter();
+        dpx = vdpx; dpy = vdpy; dCamX = vdcx;
+        dSpawnX = vdsx; dSpawnY = vdsy;
+        nightHP = vhp; nightDeaths = vnd; nightDmg = vnmm;
+        dSeenCat = vsc; dSeenRab = vsr;
+        dGrace = 1.0f;
+        G.scene = SC_DREAM;
+    } else if (sc == SC_ROOM) {
+        rpx = vrpx; rpy = vrpy;
+    }
+    LOGI("session restored scene=%d", G.scene);
+    return 1;
+}
+
 // ============================================================
 //  空想时间世界
 // ============================================================
