@@ -1,0 +1,85 @@
+# ==========================================================================
+#  《ユメ》 概念版 —— 对话文本容器
+#
+#  格式:   节点ID | 说话人 | 人像 | 台词
+#    · 人像:  none / colleague / him / cat / rabbit
+#    · 连续同 ID 的行组成一段对话, 按出现顺序播放
+#    · 以 # 开头的行是注释; 空行忽略
+#    · 修改此文件后重新执行 build.sh 即可生效（字库会自动重烘焙）
+#
+#  ！！本文件全部为占位测试稿, 请整段替换。它不定义剧情与结局。
+# ==========================================================================
+
+# ---------------- 现实 · 房间 ----------------
+room.self   | 空蝉 | none      | 又是这个点。
+room.self   | 空蝉 | none      | 灯开着，但房间还是暗的。
+
+room.pc     | 空蝉 | none      | 表格还停在我昨天关掉的那一行。
+room.pc     | 空蝉 | none      | 光标在闪，像是在替我数秒。
+
+room.shelf  | 空蝉 | none      | 上面三层是说明书，下面两层没拆封。
+room.shelf  | 空蝉 | none      | 我买书的时候总以为自己会变。
+
+room.window | 空蝉 | none      | 对面楼的灯只剩两户。
+room.window | 空蝉 | none      | 有一户的窗台上摆着东西，看不清是什么。
+
+room.bin    | 空蝉 | none      | 空的。
+room.bin    | 空蝉 | none      | 今天连垃圾都没制造出来。
+
+room.phone  | 空蝉 | none      | 三条未读。都是群的。
+room.phone  | 空蝉 | none      | 没有人单独找我。
+
+room.npc    | 同僚 | colleague | 「还没走？」
+room.npc    | 空蝉 | none      | 「嗯。」
+room.npc    | 同僚 | colleague | 「我以为你都到家了。」
+room.npc    | 空蝉 | none      | 「到了。」
+room.npc    | 同僚 | colleague | 「……那你这是哪儿？」
+room.npc    | 空蝉 | none      | 我没回答。
+room.npc    | 同僚 | colleague | 「早点睡吧。」
+room.npc    | 同僚 | colleague | 「别再熬了。」
+
+room.bed    | 空蝉 | none      | 床单有点潮。
+room.bed    | 空蝉 | none      | 闭上眼之前，我总觉得今晚会有点不一样。
+
+# ---------------- 梦境 · 自动向右 ----------------
+dream.start | 空蝉 | none   | 脚下的地是软的。
+dream.start | 空蝉 | none   | 有东西在往前推，我停不下来。
+
+dream.cat   | ？？ | cat    | 「你又一次走得太慢了。」
+dream.cat   | 空蝉 | none   | 「我在走。」
+dream.cat   | ？？ | cat    | 「你在被推着走。」
+dream.cat   | ？？ | cat    | 「不一样的。」
+
+dream.rabbit| ？？ | rabbit | 「别回头。回头的东西会跟上来。」
+dream.rabbit| 空蝉 | none   | 「后面有什么？」
+dream.rabbit| ？？ | rabbit | 「你昨晚删掉的东西。」
+dream.rabbit| ？？ | rabbit | 「它比你先到这里。」
+
+dream.dead  | 空蝉 | none   | 又一次。
+dream.dead  | 空蝉 | none   | 没关系，反正梦里不会死。
+
+# ---------------- 空想时间世界 ----------------
+void.meet   | 他   | him  | 「你来了。」
+void.meet   | 空蝉 | none | 「……」
+void.meet   | 他   | him  | 「你每次都来。」
+void.meet   | 他   | him  | 「你每次都不说话。」
+void.meet   | 空蝉 | none | 「我能说什么。」
+void.meet   | 他   | him  | 「说再见也行。」
+void.meet   | 他   | him  | 「或者，什么都不说，就走了。」
+void.meet   | 空蝉 | none | 「……」
+void.meet   | 他   | him  | 「算了。天要亮了。」
+
+void.end    | 空蝉 | none | 有个声音在叫我。
+void.end    | 空蝉 | none | 不是他。
+
+# ---------------- 起床 ----------------
+room.wake   | 空蝉 | none | 醒了。
+room.wake   | 空蝉 | none | 枕头是干的。
+room.wake   | 空蝉 | none | 我不记得自己有没有哭过。
+
+# ---------------- 房间 · 补充可交互物 ----------------
+room.door   | 空蝉 | none | 门锁着。
+room.door   | 空蝉 | none | 钥匙就挂在门边，一直挂着。
+room.door   | 空蝉 | none | 我也没想去的地方。
+room.plant  | 空蝉 | none | 它比我来的时候矮了。
+room.plant  | 空蝉 | none | 也许是我记错了。
